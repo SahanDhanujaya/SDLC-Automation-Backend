@@ -7,11 +7,286 @@ datasource db {
   provider = "postgresql"
 }
 
+
+// =====================
+// USER
+// =====================
+
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  age       Int?
+
+  id String @id @default(cuid())
+
+
+  firstName String
+
+  lastName String
+
+
+  username String @unique
+
+  email String @unique
+
+
+  password String?
+
+
+  avatar String?
+
+
+  provider AuthProvider @default(LOCAL)
+
+
+  isVerified Boolean @default(false)
+
+
+  status UserStatus @default(ACTIVE)
+
+
+  // Organizations created by user
+  ownedOrganizations Organization[] @relation("OrganizationOwner")
+
+
+
+  // Organization memberships
+  organizationMembers OrganizationMember[]
+
+
+
+  // Project memberships
+  projectMembers ProjectMember[]
+
+
+
+  // Projects created by user
+  createdProjects Project[] @relation("ProjectCreator")
+
+  userLastLogin DateTime @default(now())
+
   createdAt DateTime @default(now())
+
   updatedAt DateTime @updatedAt
+
+
+
+  @@index([email])
+
+  @@index([username])
+
+}
+
+
+// =====================
+// ORGANIZATION
+// =====================
+
+model Organization {
+
+  id String @id @default(cuid())
+
+
+  name String
+
+
+  slug String @unique
+
+
+  logo String?
+
+
+
+  // Owner
+
+  ownerId String
+
+
+  owner User @relation("OrganizationOwner", fields: [ownerId],references: [id], onDelete: Cascade)
+
+
+
+  // Members
+
+  members OrganizationMember[]
+
+
+
+  // Projects
+
+  projects Project[]
+
+
+
+  createdAt DateTime @default(now())
+
+
+  updatedAt DateTime @updatedAt
+
+
+
+  @@index([ownerId])
+
+}
+
+
+// =====================
+// ORGANIZATION MEMBERS
+// =====================
+
+model OrganizationMember {
+
+  id String @id @default(cuid())
+
+
+
+  userId String
+
+
+  organizationId String
+
+
+
+  user User @relation(fields: [userId],references: [id],onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role OrganizationRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  @@unique([ userId, organizationId])
+  @@index([organizationId])
+
+}
+
+
+// =====================
+// PROJECT
+// =====================
+
+model Project {
+
+
+  id String @id @default(cuid())
+
+
+  name String
+
+
+
+  description String? @db.Text
+
+
+
+  status ProjectStatus @default(ACTIVE)
+
+
+
+  // Organization
+
+  organizationId String
+
+
+
+  organization Organization @relation(fields: [organizationId],references: [id],onDelete: Cascade)
+
+
+
+  // Creator
+
+  createdById String
+
+
+
+  createdBy User @relation("ProjectCreator", fields: [createdById],references: [id],onDelete: Cascade)
+
+
+
+  // Members
+
+  members ProjectMember[]
+
+
+
+  createdAt DateTime @default(now())
+
+
+  updatedAt DateTime @updatedAt
+
+
+
+  @@index([organizationId])
+
+
+  @@index([createdById])
+
+}
+
+
+// =====================
+// PROJECT MEMBERS
+// =====================
+
+model ProjectMember {
+
+
+  id String @id @default(cuid())
+
+
+
+  userId String
+
+
+  projectId String
+
+
+
+  user User @relation(fields: [userId],references: [id],onDelete: Cascade)
+
+
+
+  project Project @relation(fields: [projectId],references: [id],onDelete: Cascade)
+
+
+
+  role ProjectRole @default(DEVELOPER)
+
+
+
+  joinedAt DateTime @default(now())
+
+
+  createdAt DateTime @default(now())
+  @@unique([userId, projectId])
+  @@index([projectId])
+}
+
+// =====================
+// ENUMS
+// =====================
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  GITHUB
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ProjectRole {
+  OWNER
+  ADMIN
+  DEVELOPER
+  VIEWER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+  COMPLETED
 }
